@@ -58,22 +58,16 @@ func (p *ElementParser) OnElementEnd(offset int64, id int) bool {
 			return p.client.OnListEnd(offset, id)
 		case TypeBinary:
 			return p.ParseBinary(p.id, p.buf.Bytes())
-			break
 		case TypeUint:
 			return p.ParseUint(p.id, p.buf.Bytes())
-			break
 		case TypeInt:
 			return p.ParseInt(p.id, p.buf.Bytes())
-			break
 		case TypeFloat:
 			return p.ParseFloat(p.id, p.buf.Bytes())
-			break
 		case TypeString:
 			return p.ParseString(p.id, p.buf.Bytes())
-			break
 		case TypeUTF8:
 			return p.ParseUTF8(p.id, p.buf.Bytes())
-			break
 		}
 	}
 	return p.ParseBinary(p.id, p.buf.Bytes())

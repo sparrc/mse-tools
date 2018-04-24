@@ -17,7 +17,6 @@ package ebml
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -81,8 +80,7 @@ func (w *Writer) Write(id int, data interface{}) (int, error) {
 		return w.writeBinary(id, v)
 	}
 
-	panic(fmt.Sprintf("Unexpected type %s", data))
-	return 0, errors.New("Unexpected type")
+	return 0, fmt.Errorf("Unexpected type %s", data)
 }
 
 func (w *Writer) WriteListStart(id int) {
