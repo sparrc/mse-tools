@@ -16,9 +16,10 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/acolwell/mse-tools/ebml"
 	"github.com/acolwell/mse-tools/webm"
-	"time"
 )
 
 type webMClient struct {
@@ -51,6 +52,9 @@ func (c *webMClient) OnListStart(offset int64, id int) bool {
 			c.manifest.Init = &InitSegment{Offset: c.headerOffset, Size: c.headerSize}
 		}
 		c.clusterOffset = offset
+		c.manifest.Media = append(c.manifest.Media, &MediaSegment{
+			Frames: make([]*webm.BlockInfo, 0),
+		})
 	}
 	return true
 }
@@ -84,11 +88,9 @@ func (c *webMClient) OnListEnd(offset int64, id int) bool {
 	}
 
 	if id == webm.IdCluster {
-		c.manifest.Media = append(c.manifest.Media, &MediaSegment{
-			Offset:   c.clusterOffset,
-			Size:     (offset - c.clusterOffset),
-			Timecode: (float64(c.clusterTimecode) * scaleMult),
-		})
+		c.manifest.Media[len(c.manifest.Media)-1].Offset = c.clusterOffset
+		c.manifest.Media[len(c.manifest.Media)-1].Size = (offset - c.clusterOffset)
+		c.manifest.Media[len(c.manifest.Media)-1].Timecode = (float64(c.clusterTimecode) * scaleMult)
 		return true
 	}
 
@@ -99,6 +101,14 @@ func (c *webMClient) OnListEnd(offset int64, id int) bool {
 }
 
 func (c *webMClient) OnBinary(id int, value []byte) bool {
+	if id != webm.IdSimpleBlock && id != webm.IdBlock {
+		return true
+	} else {
+		blockInfo := webm.ParseSimpleBlock(value)
+		c.manifest.Media[len(c.manifest.Media)-1].Frames = append(
+			c.manifest.Media[len(c.manifest.Media)-1].Frames, blockInfo,
+		)
+	}
 	return true
 }
 
@@ -109,6 +119,7 @@ func (c *webMClient) OnInt(id int, value int64) bool {
 func (c *webMClient) OnUint(id int, value uint64) bool {
 	if id == webm.IdTimecodeScale {
 		c.timecodeScale = value
+		c.manifest.TimecodeScale = value
 		return true
 	}
 	if id == webm.IdTimecode {
@@ -117,7 +128,10 @@ func (c *webMClient) OnUint(id int, value uint64) bool {
 	}
 	if id == webm.IdDateUTC {
 		c.manifest.StartDate = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(value))
-
+		return true
+	}
+	if id == webm.IdDefaultDuration {
+		c.manifest.DefaultTrackDuration = value
 		return true
 	}
 	return true

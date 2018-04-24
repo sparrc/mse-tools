@@ -18,14 +18,15 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/acolwell/mse-tools/ebml"
-	"github.com/acolwell/mse-tools/webm"
-	"golang.org/x/net/websocket"
 	"io"
 	"log"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/acolwell/mse-tools/ebml"
+	"github.com/acolwell/mse-tools/webm"
+	"golang.org/x/net/websocket"
 )
 
 const (
@@ -145,7 +146,7 @@ func (c *BlockGroupClient) OnUint(id int, value uint64) bool {
 		c.writer.Write(id, value)
 		return true
 	}
-	log.Printf("OnUint() : Unexpected element %s %u\n", webm.IdToName(id), value)
+	log.Printf("OnUint() : Unexpected element %s %d\n", webm.IdToName(id), value)
 	return false
 }
 
