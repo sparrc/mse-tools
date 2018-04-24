@@ -15,9 +15,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/acolwell/mse-tools/webm"
 )
 
 type InitSegment struct {
@@ -29,6 +32,7 @@ type MediaSegment struct {
 	Offset   int64
 	Size     int64
 	Timecode float64
+	Frames   []*webm.BlockInfo
 }
 
 type JSONManifest struct {
@@ -58,10 +62,22 @@ func (jm *JSONManifest) ToJSON() string {
 	str += "  \"media\": [\n"
 	for i := range jm.Media {
 		m := jm.Media[i]
-		str += fmt.Sprintf("    { \"offset\": %d, \"size\": %d, \"timecode\": %f }",
+		str += fmt.Sprintf("    { \"offset\": %d, \"size\": %d, \"type\": \"TODO\", \"timecode\": %f",
 			m.Offset,
 			m.Size,
 			m.Timecode)
+
+		// Add idr_frames to JSON output:
+		idrFrames := []int{}
+		for i, frame := range m.Frames {
+			if frame.Flags == 0x80 {
+				idrFrames = append(idrFrames, i)
+			}
+		}
+		buf, _ := json.Marshal(idrFrames)
+		str += fmt.Sprintf(", \"idr_frames\": {\"1\": %s }", buf)
+		str += fmt.Sprint(" }")
+
 		if i+1 != len(jm.Media) {
 			str += ","
 		}
