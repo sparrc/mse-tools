@@ -36,11 +36,13 @@ type MediaSegment struct {
 }
 
 type JSONManifest struct {
-	Type      string
-	Duration  float64
-	StartDate time.Time
-	Init      *InitSegment
-	Media     []*MediaSegment
+	Type                 string
+	Duration             float64
+	StartDate            time.Time
+	Init                 *InitSegment
+	Media                []*MediaSegment
+	TimecodeScale        uint64
+	DefaultTrackDuration uint64
 }
 
 func (jm *JSONManifest) ToJSON() string {
@@ -51,6 +53,8 @@ func (jm *JSONManifest) ToJSON() string {
 	} else {
 		str += fmt.Sprintf("  \"duration\": %f,\n", jm.Duration)
 	}
+
+	str += fmt.Sprintf("  \"timescale\": { \"1\": %d },\n", jm.TimecodeScale)
 
 	if !jm.StartDate.IsZero() {
 		str += "  \"startDate\": " + jm.StartDate.Format(time.RFC3339Nano) + ", \n"
@@ -67,15 +71,21 @@ func (jm *JSONManifest) ToJSON() string {
 			m.Size,
 			m.Timecode)
 
-		// Add idr_frames to JSON output:
-		idrFrames := []int{}
-		for i, frame := range m.Frames {
-			if frame.Flags == 0x80 {
-				idrFrames = append(idrFrames, i)
+		if strings.HasPrefix(jm.Type, "video") {
+			// Add idr_frames to JSON output:
+			idrFrames := []int{}
+			for i, frame := range m.Frames {
+				if isKeyFrame(frame) {
+					idrFrames = append(idrFrames, i)
+				}
 			}
+			buf, _ := json.Marshal(idrFrames)
+			str += fmt.Sprintf(", \"idr_frames\": {\"1\": %s }", buf)
 		}
-		buf, _ := json.Marshal(idrFrames)
-		str += fmt.Sprintf(", \"idr_frames\": {\"1\": %s }", buf)
+
+		str += fmt.Sprintf(", \"tick_count\": {\"1\": %d}", len(m.Frames))
+		str += fmt.Sprintf(", \"tick_size\": {\"1\": %f}", float64(jm.DefaultTrackDuration)/1000)
+
 		str += fmt.Sprint(" }")
 
 		if i+1 != len(jm.Media) {
@@ -86,6 +96,10 @@ func (jm *JSONManifest) ToJSON() string {
 	str += "  ]\n"
 	str += "}\n"
 	return str
+}
+
+func isKeyFrame(b *webm.BlockInfo) bool {
+	return (b.Flags & 0x80) != 0
 }
 
 func NewJSONManifest() *JSONManifest {

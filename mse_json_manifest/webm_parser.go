@@ -119,6 +119,7 @@ func (c *webMClient) OnInt(id int, value int64) bool {
 func (c *webMClient) OnUint(id int, value uint64) bool {
 	if id == webm.IdTimecodeScale {
 		c.timecodeScale = value
+		c.manifest.TimecodeScale = value
 		return true
 	}
 	if id == webm.IdTimecode {
@@ -127,7 +128,10 @@ func (c *webMClient) OnUint(id int, value uint64) bool {
 	}
 	if id == webm.IdDateUTC {
 		c.manifest.StartDate = time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(value))
-
+		return true
+	}
+	if id == webm.IdDefaultDuration {
+		c.manifest.DefaultTrackDuration = value
 		return true
 	}
 	return true
